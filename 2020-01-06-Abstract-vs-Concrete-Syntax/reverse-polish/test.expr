@@ -1,3 +1,6 @@
 # This is a test file for input to the expression compiler ec.
 40 + 2
+45/52
 56
+(2+3)*5
+2 + 3 * 5
