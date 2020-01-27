@@ -68,3 +68,4 @@ fun prettyprint token  = case token of
 			|(OBJ _) =>print("\027[34m"^(tokentostring token))
 			|(SYM _) =>print("\027[37m"^(tokentostring token))
 			|(OP _) =>print("\027[35m"^(tokentostring token))
+
