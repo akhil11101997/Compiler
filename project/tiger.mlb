@@ -1,2 +1,4 @@
 $(SML_LIB)/basis/basis.mlb
-tiger.sml(* actual code *)
+tokens.sml
+tiger.lex.sml
+tigh.sml
