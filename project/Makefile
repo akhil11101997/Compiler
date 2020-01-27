@@ -9,8 +9,8 @@
 #
 # This rule says that all `.lex.sml` files depend on the corresponding
 # `.lex and they can be achieved by running mllex on $<.
-# %.lex.sml: %.lex
-#	mllex $<
+%.lex.sml: %.lex
+	mllex $<
 
 # Similar to lex
 
@@ -18,21 +18,25 @@
 #	mlyacc $<
 
 
-all: tiger
+all: tigh
 
 PHONY: all clean test
-
+tigh: tokens.sml tiger.lex.sml tigh.sml
+	@mlton -output tigh tiger.mlb
 clean:
-	rm -f tiger
+	@echo "cleaning"
+	@rm -f *.lex.sml rp
+	@rm -f *.grm.sml *.grm.desc *.grm.sig.ec
+	@rm -f tigc
+	
 
 # rp: rp.lex.sml rp.mlb rp.sml ${COMMON}
 #	mlton rp.mlb
 
-tiger: tiger.sml tiger.mlb 
-	mlton tiger.mlb
 
 
  test: all
+	@echo "Nothing is there"
 	${CURDIR}/rp test.inp
 	${CURDIR}/ec test.expr | ${CURDIR}/rp
 
