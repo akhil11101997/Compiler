@@ -1,0 +1,187 @@
+
+(*The grammar is written using online variant of tiger language and the link is
+
+https://www.lrde.epita.fr/~tiger/tiger.html *)
+(* This is the preamble where you can have arbitrary sml code. For us
+it is empty *)
+
+%%
+
+%eop EOF (* What token to use as end of parsing token              *)
+%verbose (* Generates a printed form of the table in Tiger.grm.desc *)
+%pure
+
+
+%name Tiger (* The prefix to use on the name of LrValFun structure *)
+
+(* The terminals or tokens of the language *)
+%term CONST of int
+    | PLUS    
+    | MINUS
+    | MUL
+    | DIV
+    | LT | EQ | LTEQ | GTEQ | GT  | AND | OR | NTEQ
+    | NEWLINE
+    | EOF
+    | IF
+    | ELSE
+    | THEN
+    | ASSIGN
+    | LPAREN 
+    | RPAREN
+    | WHILE
+    | DO
+    | FOR
+    | TO
+    | BREAK
+    | ID of string
+    | SEMICOLON
+    | LET
+    | IN
+    | END
+    | VAR
+    | UMINUS
+    | LBRACK
+    | RBRACK
+    | DOT
+    | NIL
+    | OF
+    | COMMA
+    | LBRACE
+    | RBRACE
+    | NEW
+    | QUOTE of string
+    | IMPORT
+    | PRIMITIVE
+    | FUNCTION
+    | COLON
+    | TYPE
+    | ARRAY 
+    | METHOD
+    | CLASS
+    | EXTENDS
+(* The nonterminals of the language *)
+%nonterm EXP     of Ast.Expr
+       | EXPS    of Ast.Expr list
+       | PROGRAM of Ast.Program 
+       | DECS	 of Ast.Dec list	
+       | DEC	 of Ast.Dec
+       | LVALUE  of Ast.Expr
+       | Record  of Ast.Expr
+       | RECBODY of (string * Ast.Expr) list
+       | RECBODYTAIL of (string * Ast.Expr) list
+       | ARGUMENTS of Ast.Expr list
+       | ARGTAIL of Ast.Expr list
+       | EXPTAIL of Ast.Expr list
+       |TYFIELDSTAIL of (string*string) list
+       |TYFIELDS of (string*string) list
+       | CLASSFIELD of Ast.Classfield
+       | CLASSFIELDS of Ast.Classfield list
+       | VARDEC of Ast.Vdec
+%noshift EOF
+
+
+%start PROGRAM
+(*
+
+Operator precedence and associativity. The %left says the operator is
+left associative and the precedence increase as you go down this list.
+
+*)
+%nonassoc ASSIGN
+%nonassoc ID
+%nonassoc DO FOR THEN  
+%nonassoc ELSE 
+%nonassoc OF LBRACK
+%left OR
+%left AND
+%nonassoc LT GT EQ NTEQ GTEQ LTEQ
+%left PLUS MINUS  (* + and - are of same precedence *)
+%left MUL   DIV      (* higher than + and -            *)
+%left UMINUS
+(* The type that captures position in the input *)
+%pos int
+
+%%
+
+PROGRAM : EXP               (Ast.Foo EXP )
+	| DECS		    (Ast.Bar DECS)
+
+EXPS    : (* empty *)          ( []                  )	      
+	| EXP EXPTAIL		(EXP :: EXPTAIL	   )
+EXPTAIL	:(*empty*)		([]) 
+        |SEMICOLON EXP EXPTAIL	(EXP::EXPTAIL)
+	
+EXP     : LVALUE  ASSIGN EXP %prec ASSIGN(Ast.Assign (LVALUE, EXP))
+	| WHILE EXP DO EXP  (Ast.While EXP1 EXP2)
+	| FOR ID ASSIGN EXP TO EXP DO EXP  %prec FOR(Ast.For ID EXP1 EXP2 EXP3)
+	| IF EXP THEN EXP    	(Ast.Openif EXP1 EXP2 )
+	| IF EXP THEN EXP ELSE EXP (Ast.Closedif  EXP1 EXP2 EXP3)
+	| BREAK 		(Ast.BREAK	)
+	| LET DECS IN EXPS END  (Ast.LET (DECS, EXPS) )
+	| EXP EQ EXP          (Ast.equal  EXP1 EXP2)
+	| EXP NTEQ EXP          (Ast.notequal  EXP1 EXP2)
+	| EXP LTEQ EXP          (Ast.lessequal  EXP1 EXP2)
+	| EXP LT EXP          (Ast.less  EXP1 EXP2)
+	| EXP GTEQ EXP          (Ast.greatequal  EXP1 EXP2)
+	| EXP GT EXP          (Ast.great  EXP1 EXP2)
+	| EXP AND EXP          (Ast.logicaland  EXP1 EXP2)
+	| EXP OR EXP          (Ast.or  EXP1 EXP2)
+	| EXP MUL   EXP        ( Ast.mul   EXP1 EXP2 )
+    	| EXP DIV EXP          (Ast.divide  EXP1 EXP2)
+    	| EXP PLUS EXP         ( Ast.plus  EXP1 EXP2 )
+	| EXP MINUS EXP        ( Ast.minus EXP1 EXP2 )
+	| CONST                ( Ast.Const CONST     )
+	| LPAREN EXPS RPAREN  	(Ast.Closed EXPS)
+	|MINUS EXP     %prec UMINUS 	(Ast.Neg EXP   )
+	| LVALUE		(LVALUE)
+	| NIL 			(Ast.NIL)
+	| ID LBRACK EXP RBRACK OF EXP %prec OF(Ast.Array(ID,EXP1,EXP2) )
+	| ID LBRACE RECBODY RBRACE 	(Ast.Record (ID, RECBODY))
+	| NEW ID			(Ast.Object ID)
+	| ID LPAREN ARGUMENTS RPAREN 	(Ast.FunCall (ID,ARGUMENTS) )
+	| LVALUE DOT ID LPAREN ARGUMENTS RPAREN    (Ast.MethodCall (LVALUE,ID,ARGUMENTS) )
+	| QUOTE				(Ast.Quote QUOTE)
+ARGUMENTS: (*empty*)			([])
+	 | EXP	ARGTAIL	(EXP::ARGTAIL)
+ARGTAIL	 :			([])
+	| COMMA EXP ARGTAIL	(EXP::ARGTAIL)
+RECBODY : (*empty*)			([])
+	 |ID EQ EXP RECBODYTAIL ((ID, EXP)::RECBODYTAIL)
+RECBODYTAIL:(*empty*)				([])
+	|COMMA ID EQ EXP RECBODYTAIL	((ID, EXP)::[])
+
+DECS    :(*empty*)			([])
+	|DEC DECS		(DEC :: DECS	)
+
+DEC	: VARDEC						(Ast.VariableDec VARDEC)
+	 |IMPORT QUOTE						(Ast.Import QUOTE)
+	 |PRIMITIVE ID LPAREN TYFIELDS RPAREN		(Ast.PrimitiveDec (ID,(Ast.Tyfield TYFIELDS) ) )
+	 |PRIMITIVE ID LPAREN TYFIELDS RPAREN COLON ID	(Ast.PrimitiveDecType (ID1,(Ast.Tyfield TYFIELDS),ID2 ) )
+	 |FUNCTION ID LPAREN TYFIELDS	RPAREN	 EQ EXP	(Ast.FunctionDec(ID,(Ast.Tyfield TYFIELDS),EXP) )
+	 |FUNCTION ID LPAREN TYFIELDS   RPAREN COLON ID  EQ EXP (Ast.FunctionDecType(ID1,(Ast.Tyfield TYFIELDS),ID2,EXP) )
+	 |TYPE ID EQ ID				(Ast.TypeDec (ID1,(Ast.NameTy ID2) ))
+	 |TYPE ID EQ LBRACE TYFIELDS RBRACE		(Ast.TypeDec (ID1,(Ast.RecordTy (Ast.Tyfield TYFIELDS) ) ))
+	 |TYPE ID EQ ARRAY OF ID		(Ast.TypeDec (ID1,(Ast.ArrayTy ID2) ) )
+	 |TYPE ID EQ CLASS EXTENDS ID LBRACE CLASSFIELDS RBRACE (Ast.TypeDec (ID1,(Ast.ClassDefCanType(ID2, CLASSFIELDS) ) ) )
+	|TYPE ID EQ CLASS LBRACE CLASSFIELDS RBRACE (Ast.TypeDec (ID,(Ast.ClassDefCan CLASSFIELDS) ) )
+	|CLASS ID LBRACE CLASSFIELDS RBRACE		(Ast.ClassDec (ID,CLASSFIELDS))
+	|CLASS ID EXTENDS ID LBRACE CLASSFIELDS RBRACE (Ast.ClassDecType (ID1,ID2,CLASSFIELDS))
+
+TYFIELDS : (*empty*)			([])
+	|ID COLON ID TYFIELDSTAIL ((ID1,ID2)::TYFIELDSTAIL)
+TYFIELDSTAIL:(*empty*)			([])
+	|COMMA ID COLON ID TYFIELDSTAIL((ID1,ID2)::TYFIELDSTAIL)
+
+LVALUE	: ID			(Ast.Name ID)
+	|LVALUE DOT ID		(Ast.Method ( LVALUE, ID ))
+	|LVALUE LBRACK EXP RBRACK (Ast.Access( LVALUE, EXP))
+	|ID LBRACK EXP RBRACK (Ast.Access( (Ast.Name ID), EXP))
+
+CLASSFIELDS	: (*empty*)		([])
+	|CLASSFIELD CLASSFIELDS		(CLASSFIELD::CLASSFIELDS)
+CLASSFIELD	: METHOD ID LPAREN TYFIELDS RPAREN EQ EXP (Ast.MethodDec (ID,(Ast.Tyfield TYFIELDS),EXP) )
+		| METHOD ID LPAREN TYFIELDS RPAREN COLON ID EQ EXP (Ast.MethodDecType (ID1,(Ast.Tyfield TYFIELDS),ID2,EXP) ) 
+		| VARDEC							(Ast.ClassAttribute VARDEC)
+VARDEC		: VAR ID ASSIGN EXP 				(Ast.VarDec(ID, EXP) )		
+	 	|VAR ID COLON ID ASSIGN EXP 		(Ast.VarDecType(ID1, ID2, EXP) )	
