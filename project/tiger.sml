@@ -57,7 +57,7 @@ fun print_error (s,i:int,_) = TextIO.output(TextIO.stdErr,
 					    "Error, line " ^ (Int.toString i) ^ ", " ^ s ^ "\n")
 
 val (program,_) = TigerParser.parse (0,thisLexer,print_error,()) (* parsing *)
-val x  = beautify.pretty 0 ("") program                    (* compiling/code generation *)
+val x  = beautify.pretty 0 program                    (* compiling/code generation *)
 val _           = TextIO.output(TextIO.stdOut, x)
 			       (* writing out the executable (in this case rp Tigeression ) *)
 
