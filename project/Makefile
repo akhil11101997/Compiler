@@ -14,20 +14,20 @@
 
 # Similar to lex
 
-# %.grm.sml: %.grm
-#	mlyacc $<
+%.grm.sml: %.grm
+	mlyacc $<
 
 
-all: tigh
+all: tigc
 
-PHONY: all clean test
-tigh: tokens.sml tiger.lex.sml tigh.sml
-	@mlton -output tigh tiger.mlb
+PHONY: all clean 
+tigc:  tiger.mlb tiger.lex.sml tiger.grm.sig tiger.grm.sml tiger.sml ast.sml beautify.sml  
+	mlton -output tigc tiger.mlb
 clean:
-	@echo "cleaning"
-	@rm -f *.lex.sml rp
-	@rm -f *.grm.sml *.grm.desc *.grm.sig.ec
-	@rm -f tigc
+	echo "cleaning"
+	rm -f *.lex.sml rp
+	rm -f *.grm.sml *.grm.desc *.grm.sig ec
+	rm -f tigc
 	
 
 # rp: rp.lex.sml rp.mlb rp.sml ${COMMON}
